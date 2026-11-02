@@ -1,0 +1,9 @@
+{
+  "name": "taxiq-the-product-sprints",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TaxIQ: PRD, deck and clickable prototype for a fintech tax-planning module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaxIQ prototype</title>
+<meta name="description" content="Clickable prototype of TaxIQ: a 4-step quiz that tells a salaried Indian which tax regime saves more, and the next three moves.">
+<style>
+/* Fonts are bundled (SIL Open Font License, see fonts/) so the prototype works offline. */
+@font-face { font-family: 'Bricolage Grotesque'; src: url(fonts/bricolage-grotesque-latin-wght-normal.woff2) format('woff2'); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: 'Public Sans'; src: url(fonts/public-sans-latin-400-normal.woff2) format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Public Sans'; src: url(fonts/public-sans-latin-500-normal.woff2) format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Public Sans'; src: url(fonts/public-sans-latin-600-normal.woff2) format('woff2'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Public Sans'; src: url(fonts/public-sans-latin-700-normal.woff2) format('woff2'); font-weight: 700; font-display: swap; }
+:root {
+  --indigo: #24306B;
+  --indigo-soft: #E7EAF6;
+  --marigold: #E9A23B;
+  --marigold-ink: #6B4100;
+  --paper: #F3F5FA;
+  --ink: #161A2E;
+  --slate: #737A93;
+  --slate-soft: #E4E6EE;
+  --line: #DDE1EC;
+  --leaf: #1F8A5B;
+  --white: #FFFFFF;
+  --display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
+  --r-sm: 8px;
+  --r-md: 14px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.5 var(--body);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Page layout: guide panel + device ---------- */
+.stage {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) auto;
+  justify-content: center;
+  gap: 56px;
+  padding: 40px 24px;
+  align-items: start;
+}
+.guide { position: sticky; top: 40px; max-width: 340px; }
+.guide h1 {
+  font: 800 34px/1.05 var(--display);
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+  color: var(--indigo);
+}
+.guide .lede { margin: 0 0 28px; color: #3E4462; }
+.guide h2 { font: 650 15px/1.3 var(--display); margin: 0 0 10px; }
+.guide section { padding: 18px 0; border-top: 1px solid var(--line); }
+.personas { display: flex; flex-wrap: wrap; gap: 8px; }
+.personas button {
+  border: 1px solid var(--line); background: var(--white);
+  border-radius: 999px; padding: 6px 14px; font-weight: 500;
+}
+.personas button:hover { border-color: var(--indigo); }
+.personas small { display: block; width: 100%; color: var(--slate); margin-top: 4px; }
+#now-title { font-weight: 600; margin: 0 0 4px; }
+#now-body { margin: 0; color: #3E4462; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag { font-size: 12px; font-weight: 600; color: var(--indigo); background: var(--indigo-soft); padding: 2px 8px; border-radius: 6px; }
+.timer { font: 650 13px var(--body); color: var(--leaf); margin: 0 0 8px; min-height: 1.2em; }
+#events { list-style: none; margin: 0; padding: 0; font-size: 12.5px; max-height: 200px; overflow: auto; }
+#events li { padding: 4px 0; border-bottom: 1px dashed var(--line); display: flex; gap: 8px; }
+#events b { font-weight: 600; color: var(--ink); }
+#events span { color: var(--slate); }
+.guide footer { font-size: 12.5px; color: var(--slate); padding-top: 18px; border-top: 1px solid var(--line); }
+.guide footer a { color: var(--indigo); }
+
+/* ---------- Device ---------- */
+.device {
+  width: 390px; height: 820px;
+  background: var(--ink);
+  border-radius: 48px;
+  padding: 12px;
+  box-shadow: 0 30px 60px -30px rgba(22, 26, 46, 0.45);
+}
+.screen {
+  width: 100%; height: 100%;
+  background: var(--white);
+  border-radius: 38px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+.statusbar {
+  height: 44px; flex: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; font-size: 13px; font-weight: 600;
+}
+.view { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.pad { padding: 8px 22px 24px; }
+.grow { flex: 1; }
+
+/* ---------- Shared UI ---------- */
+h2.title, h3.title { font-family: var(--display); letter-spacing: -0.015em; margin: 0; }
+.title-lg { font-size: 30px; line-height: 1.08; font-weight: 800; }
+.title-md { font-size: 22px; line-height: 1.15; font-weight: 650; }
+.muted { color: var(--slate); }
+.small { font-size: 13px; }
+.btn {
+  display: block; width: 100%;
+  border: 0; border-radius: var(--r-md);
+  padding: 15px 18px; font-weight: 600; font-size: 16px;
+  background: var(--indigo); color: var(--white);
+}
+.btn:hover { background: #1C2657; }
+.btn.ghost { background: transparent; color: var(--indigo); border: 1px solid var(--line); }
+.btn.ghost:hover { border-color: var(--indigo); }
+.btn + .btn { margin-top: 10px; }
+.btn[disabled] { opacity: .4; cursor: not-allowed; }
+.footer-cta { padding: 14px 22px 22px; border-top: 1px solid var(--line); background: var(--white); flex: none; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 4px 16px 0; flex: none; }
+.iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; }
+.iconbtn:hover { background: var(--paper); }
+.progress { flex: 1; height: 6px; background: var(--slate-soft); border-radius: 3px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--indigo); border-radius: 3px; transition: width .3s ease; }
+.stepcount { font-size: 13px; font-weight: 600; color: var(--slate); min-width: 52px; text-align: right; }
+
+/* ---------- Host app home ---------- */
+.home-head { padding: 6px 22px 18px; }
+.home-head p { margin: 0; color: var(--slate); }
+.balance { margin: 0 22px; padding: 18px; border-radius: var(--r-md); background: var(--paper); }
+.balance b { font: 650 26px var(--display); display: block; }
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 18px 22px; text-align: center; font-size: 12px; color: #3E4462; }
+.quick span { display: grid; place-items: center; width: 48px; height: 48px; margin: 0 auto 6px; border-radius: 14px; background: var(--paper); font-size: 18px; }
+.nudge { margin: 0 22px 12px; padding: 12px 14px; border-radius: var(--r-md); border: 1px solid var(--line); font-size: 13.5px; display: flex; gap: 10px; align-items: center; background: var(--white); text-align: left; width: calc(100% - 44px); }
+.nudge strong { display: block; }
+.taxiq-banner {
+  margin: 0 22px; padding: 20px; border-radius: 18px;
+  background: var(--indigo); color: var(--white);
+  border: 0; text-align: left; width: calc(100% - 44px);
+  position: relative; overflow: hidden;
+}
+.taxiq-banner .tq { font: 800 13px var(--display); color: var(--marigold); letter-spacing: .01em; }
+.taxiq-banner strong { display: block; font: 650 21px/1.15 var(--display); margin: 6px 0 8px; max-width: 250px; }
+.taxiq-banner span.cta { display: inline-block; margin-top: 12px; background: var(--marigold); color: var(--marigold-ink); font-weight: 700; padding: 8px 14px; border-radius: 10px; font-size: 14px; }
+.taxiq-banner svg { position: absolute; right: -10px; bottom: -14px; opacity: .22; }
+.tabbar { margin-top: auto; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); padding: 10px 0 18px; font-size: 11px; text-align: center; color: var(--slate); flex: none; }
+.tabbar .on { color: var(--indigo); font-weight: 700; }
+
+/* ---------- Landing ---------- */
+.landing-hero { padding: 18px 22px 0; }
+.landing-hero .regimes { display: flex; gap: 10px; margin: 26px 0 22px; }
+.landing-hero .regimes div { flex: 1; border-radius: var(--r-md); padding: 14px; background: var(--paper); }
+.landing-hero .regimes div:last-child { background: var(--indigo-soft); }
+.landing-hero .regimes b { display: block; font: 650 16px var(--display); }
+.promise { list-style: none; padding: 0; margin: 0; }
+.promise li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.promise li:last-child { border-bottom: 0; }
+.promise svg { flex: none; margin-top: 2px; }
+
+/* ---------- Quiz ---------- */
+.q { margin: 22px 0 0; }
+.q > label, .q > .qlabel { display: block; font-weight: 600; margin-bottom: 8px; }
+.q .hint { display: block; font-size: 12.5px; color: var(--slate); margin-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--line); background: var(--white);
+  border-radius: 12px; padding: 10px 14px; font-weight: 500;
+}
+.chip[aria-pressed="true"] { border-color: var(--indigo); background: var(--indigo-soft); color: var(--indigo); font-weight: 600; }
+.money { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; background: var(--white); }
+.money:focus-within { border-color: var(--indigo); }
+.money span { color: var(--slate); margin-right: 6px; }
+.money input { border: 0; outline: 0; padding: 12px 0; width: 100%; background: transparent; font-weight: 600; }
+.money em { font-style: normal; color: var(--slate); font-size: 13px; white-space: nowrap; }
+.salary-figure { font: 800 34px/1 var(--display); color: var(--indigo); letter-spacing: -0.02em; margin: 4px 0 2px; }
+.salary-figure input { font: inherit; color: inherit; border: 0; border-bottom: 2px dashed var(--line); width: 100%; padding: 4px 0; background: transparent; }
+.salary-figure input:focus { outline: 0; border-bottom-color: var(--indigo); }
+input[type=range] { width: 100%; accent-color: var(--indigo); margin: 14px 0 0; }
+.range-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--slate); }
+.check { display: flex; gap: 10px; align-items: center; margin-top: 10px; font-size: 14px; }
+.check input { width: 18px; height: 18px; accent-color: var(--indigo); }
+.route-note { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #FDF3E1; color: var(--marigold-ink); font-size: 13px; }
+.hidden { display: none !important; }
+
+/* ---------- Result ---------- */
+.verdict { padding: 14px 22px 4px; }
+.verdict .kicker { font-weight: 600; color: var(--slate); font-size: 14px; margin: 0 0 6px; }
+.compare {
+  margin: 18px 22px 0; padding: 18px 18px 14px;
+  border-radius: 18px; background: var(--paper);
+  position: relative;
+}
+.bars { display: flex; gap: 18px; height: 220px; padding-top: 34px; }
+.bar { flex: 1; display: flex; flex-direction: column; height: 100%; }
+.bar .track { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.bar .fill { flex: none; border-radius: 10px 10px 4px 4px; background: var(--slate-soft); transform-origin: bottom; min-height: 6px; }
+.bar.win .fill { background: var(--indigo); }
+.bar .amt { font: 650 18px var(--display); margin-bottom: 6px; }
+.bar.win .amt { color: var(--indigo); }
+.bar .nm { font-size: 13px; line-height: 1.3; color: var(--slate); margin-top: 8px; min-height: 34px; }
+.bar.win .nm { color: var(--indigo); font-weight: 700; }
+.stamp {
+  position: absolute; top: -14px; right: 16px;
+  background: var(--marigold); color: var(--marigold-ink);
+  font: 800 15px/1.1 var(--display);
+  padding: 10px 14px; border-radius: 12px;
+  transform: rotate(-3deg);
+  box-shadow: 0 6px 14px -8px rgba(107, 65, 0, .6);
+}
+.stamp small { display: block; font: 600 11px var(--body); }
+.breakeven { margin: 14px 0 0; font-size: 13px; color: #3E4462; }
+.meter { height: 6px; border-radius: 3px; background: var(--slate-soft); margin-top: 8px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--slate); }
+details.how { margin: 10px 0 0; font-size: 13px; }
+details.how summary { cursor: pointer; color: var(--indigo); font-weight: 600; }
+details.how table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+details.how td, details.how th { padding: 4px 0; text-align: right; border-bottom: 1px solid var(--line); font-weight: 400; }
+details.how td:first-child, details.how th:first-child { text-align: left; color: var(--slate); }
+details.how th { font-weight: 600; }
+.moves { list-style: none; padding: 0; margin: 12px 0 0; counter-reset: mv; }
+.moves li { display: grid; grid-template-columns: 28px 1fr; gap: 4px 10px; padding: 14px 0; border-bottom: 1px solid var(--line); counter-increment: mv; }
+.moves li::before { content: counter(mv); font: 800 18px var(--display); color: var(--indigo); grid-row: span 3; }
+.moves h4 { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.3; }
+.moves p { margin: 0; font-size: 13px; color: #3E4462; }
+.moves .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--paper); color: #3E4462; }
+.pill.money-pill { background: #E3F3EB; color: var(--leaf); }
+.explainer { margin-top: 18px; border-radius: var(--r-md); border: 1px solid var(--line); padding: 4px 14px; }
+.explainer summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+.explainer p { margin: 0 0 12px; font-size: 13.5px; color: #3E4462; }
+.disclaimer { font-size: 11.5px; color: var(--slate); margin: 18px 0 0; }
+
+/* ---------- Sheets ---------- */
+.scrim { position: absolute; inset: 0; background: rgba(22, 26, 46, .45); display: flex; align-items: flex-end; z-index: 5; }
+.sheet { background: var(--white); width: 100%; border-radius: 24px 24px 0 0; padding: 22px 22px 26px; max-height: 88%; overflow: auto; }
+.sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: -8px auto 16px; }
+.toggle-row { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.toggle-row:last-of-type { border-bottom: 0; }
+.toggle-row div { flex: 1; }
+.toggle-row strong { display: block; font-weight: 600; }
+.toggle-row span { font-size: 13px; color: var(--slate); }
+.switch { flex: none; width: 46px; height: 28px; border-radius: 14px; border: 0; background: var(--slate-soft); position: relative; transition: background .2s; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.switch[aria-checked="true"] { background: var(--leaf); }
+.switch[aria-checked="true"]::after { transform: translateX(18px); }
+.switch[disabled] { opacity: .4; cursor: not-allowed; }
+
+/* ---------- Saved plan ---------- */
+.saved-head { padding: 14px 22px 0; }
+.ok { display: inline-flex; gap: 6px; align-items: center; color: var(--leaf); font-weight: 600; font-size: 14px; }
+.list-title { font: 650 16px var(--display); margin: 22px 0 6px; }
+.reminders { list-style: none; padding: 0; margin: 0; }
+.reminders li { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.reminders time { font: 650 14px/1.15 var(--display); color: var(--indigo); }
+.reminders time small { display: block; font: 500 11px var(--body); color: var(--slate); }
+.offer { margin-top: 10px; border-radius: var(--r-md); border: 1px solid var(--line); padding: 14px; }
+.offer .label { font-size: 12px; font-weight: 600; color: var(--slate); }
+.offer h4 { margin: 4px 0; font-size: 16px; }
+.offer p { margin: 0 0 12px; font-size: 13px; color: #3E4462; }
+.offer .row { display: flex; gap: 8px; }
+.offer .row .btn { padding: 10px; font-size: 14px; margin: 0; }
+.linkbtn { border: 0; background: none; color: var(--indigo); font-weight: 600; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+.danger { color: #A23B3B; }
+
+/* ---------- Share card ---------- */
+.share-card { border-radius: 18px; background: var(--indigo); color: var(--white); padding: 22px; margin: 6px 0 16px; }
+.share-card .tq { font: 800 14px var(--display); color: var(--marigold); }
+.share-card strong { display: block; font: 800 26px/1.1 var(--display); margin: 10px 0 8px; }
+.share-card p { margin: 0; font-size: 14px; opacity: .85; }
+
+.toast { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--ink); color: var(--white); padding: 10px 16px; border-radius: 12px; font-size: 13.5px; z-index: 9; width: max-content; max-width: 300px; text-align: center; }
+
+/* ---------- Motion: the one orchestrated reveal ---------- */
+@keyframes rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes stampIn { 0% { opacity: 0; transform: rotate(-12deg) scale(1.4); } 70% { opacity: 1; transform: rotate(-2deg) scale(.96); } 100% { transform: rotate(-3deg) scale(1); } }
+.reveal .bar .fill { animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
+.reveal .bar:nth-child(2) .fill { animation-delay: .15s; }
+.reveal .stamp { animation: stampIn .45s .75s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal .bar .fill, .reveal .stamp { animation: none; }
+  .progress i, .switch, .switch::after { transition: none; }
+}
+
+/* ---------- Small screens: the phone becomes the page ---------- */
+@media (max-width: 900px) {
+  .stage { grid-template-columns: 1fr; padding: 0; gap: 0; }
+  .device { order: -1; width: 100%; height: 100vh; height: 100dvh; padding: 0; border-radius: 0; background: var(--white); box-shadow: none; }
+  .screen { border-radius: 0; }
+  .statusbar { display: none; }
+  .guide { position: static; max-width: none; padding: 32px 22px; }
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="guide" aria-label="About this prototype">
+    <h1>TaxIQ prototype</h1>
+    <p class="lede">Which tax regime saves you more, and your next three moves, in about two minutes with no documents. Tap through the phone, or load a persona from the PRD.</p>
+
+    <section>
+      <h2>Try a persona</h2>
+      <div class="personas">
+        <button type="button" data-persona="ananya">Ananya, Rs 9L</button>
+        <button type="button" data-persona="rohit">Rohit, Rs 22L</button>
+        <button type="button" data-persona="meera">Meera, freelancer</button>
+        <button type="button" data-persona="blank">Start blank</button>
+        <small>Personas fill the quiz; you still click through each step.</small>
+      </div>
+    </section>
+
+    <section aria-live="polite">
+      <h2>What you are seeing</h2>
+      <p id="now-title"></p>
+      <p id="now-body"></p>
+      <div class="tags" id="now-tags"></div>
+    </section>
+
+    <section>
+      <h2>Analytics events (F8)</h2>
+      <p class="timer" id="timer"></p>
+      <ul id="events"><li><span>Events appear here as you tap.</span></li></ul>
+    </section>
+
+    <footer>
+      Educational estimate for FY 2026-27 under both regimes, not tax advice. Assumes basic pay is 40% of gross, HRA is 50% of basic in metros (40% elsewhere) and EPF is 12% of basic. Capital gains are not computed.
+      <br><br><a href="../prd/TaxIQ-PRD.md">Read the PRD</a> · <a href="../deck/TaxIQ-Deck.pdf">View the deck</a>
+    </footer>
+  </aside>
+
+  <div class="device">
+    <div class="screen" id="screen">
+      <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G ▮▮▮</span></div>
+      <div class="view" id="view"></div>
+    </div>
+  </div>
+</div>
+
+<script src="tax-engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.TaxIQEngine;
+  var inr = E.inr;
+  var view = document.getElementById('view');
+  var screenEl = document.getElementById('screen');
+
+  // ---------- State ----------
+  function blankAnswers() {
+    return {
+      employment: 'salaried', ageBand: 'below60', gross: 1000000, complexIncome: false,
+      rentMonthly: 0, metro: true, inv80C: null, healthSelf: 0, healthParents: 0,
+      parentsSenior: false, homeLoanInterest: 0, npsOwn: 0, employerNps: 0,
+      goals: [], filing: null
+    };
+  }
+  var PERSONAS = {
+    ananya: Object.assign(blankAnswers(), { gross: 900000, rentMonthly: 25000, metro: true, goals: ['grow'], filing: 'self' }),
+    rohit: Object.assign(blankAnswers(), { gross: 2200000, inv80C: 150000, healthSelf: 25000, healthParents: 50000, parentsSenior: true, homeLoanInterest: 200000, npsOwn: 50000, goals: ['save', 'protect'], filing: 'ca' }),
+    meera: Object.assign(blankAnswers(), { employment: 'self', gross: 1400000, inv80C: 150000, healthSelf: 25000, goals: ['file'], filing: 'ca' })
+  };
+  var S = { screen: 'home', step: 1, a: blankAnswers(), consent: { save: true, reminders: true, offers: true }, saved: false, startedAt: null, resultMs: null, dismissed: {} };
+
+  // ---------- Analytics (F8): the event log mirrors what the app would send ----------
+  var events = [];
+  function track(name, props) {
+    events.unshift({ name: name, props: props || {}, t: new Date() });
+    var ul = document.getElementById('events');
+    ul.innerHTML = events.slice(0, 30).map(function (e) {
+      var p = Object.keys(e.props).map(function (k) { return k + '=' + e.props[k]; }).join(', ');
+      return '<li><b>' + e.name + '</b><span>' + esc(p) + '</span></li>';
+    }).join('');
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function lakh(x) { return (x / 100000).toFixed(x % 100000 === 0 ? 0 : 2).replace(/\.?0+$/, '') + ' lakh'; }
+  function digits(v) { var n = parseInt(String(v).replace(/[^0-9]/g, ''), 10); return isFinite(n) ? n : 0; }
+  function fmtPlain(x) { return x ? inr(x).replace('Rs ', '') : ''; }
+
+  // ---------- Guide panel copy per screen ----------
+  var GUIDE = {
+    home: ['Entry point inside the host app', 'TaxIQ lives inside an existing fintech app. Users arrive from a home banner, a salary-day nudge, a deadline push, SEO pages or a friend\'s share card.', ['Acquisition', 'In-app banner', 'Salary-day nudge']],
+    landing: ['Landing: the promise', 'One question, a time promise and "no documents". The answer comes before any sign-up or consent: give before you get.', ['Acquisition', 'Activation']],
+    step1: ['Quiz step 1 of 4: about you', 'Two taps. Employment type removes the standard deduction for the self-employed; age band sets old-regime exemption limits.', ['F1 4-step quiz', '12 inputs or fewer']],
+    step2: ['Quiz step 2 of 4: income', 'The only mandatory input. Complex income (capital gains, F&O, crypto, foreign) is flagged and routed to assisted filing instead of a guess.', ['F1', 'F12 Complexity router']],
+    step3: ['Quiz step 3 of 4: what you already have', 'Smart defaults instead of documents: EPF is estimated from salary, everything else can be left blank. Each field says why it matters.', ['F1', 'Low-friction data collection']],
+    step4: ['Quiz step 4 of 4: what matters to you', 'Goals rank the non-tax moves and, later, the offers. How you file today flags who needs the filing service.', ['F1', 'Personalisation']],
+    result: ['Result: Old vs New comparator', 'Tax under each regime, the saving, the break-even deduction in rupees and three ranked moves. Open "How we got this" to see the engine\'s working.', ['F2 Tax engine', 'F3 Comparator', 'F4 Top 3 moves', 'F10 Explainer', 'North Star']],
+    consent: ['Consent, asked after the answer', 'Separate opt-ins for saving, reminders and offers (DPDP Act, 2023). Offers need the plan to be saved.', ['F5 Consent and profile save']],
+    saved: ['Saved plan: retention and revenue', 'Reminders for the next deadlines, one partner offer tied to a gap from the moves, and a share card that never shows income.', ['F6 Reminders', 'F7 Personalised offer', 'F9 Share card', 'Delete in one tap']]
+  };
+  function setGuide(key) {
+    var g = GUIDE[key];
+    document.getElementById('now-title').textContent = g[0];
+    document.getElementById('now-body').textContent = g[1];
+    document.getElementById('now-tags').innerHTML = g[2].map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('');
+  }
+  function updateTimer() {
+    var el = document.getElementById('timer');
+    if (S.resultMs != null) el.textContent = 'Time to result: ' + Math.round(S.resultMs / 1000) + ' s (target: 120 s or less)';
+    else el.textContent = S.startedAt ? 'Quiz in progress' : '';
+  }
+
+  // ---------- Icons ----------
+  var I = {
+    back: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>',
+    close: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    tick: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1F8A5B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    scale: '<svg width="150" height="150" viewBox="0 0 100 100" fill="none" stroke="#fff" stroke-width="4"><path d="M50 15v70M25 85h50M20 30h60M20 30l-12 28h24zM80 30l-12 28h24z"/></svg>'
+  };
+
+  // ---------- Screens ----------
+  function render(opts) {
+    opts = opts || {};
+    var key = S.screen === 'quiz' ? 'step' + S.step : S.screen;
+    setGuide(key);
+    updateTimer();
+    var html = SCREENS[S.screen]();
+    view.innerHTML = html;
+    view.scrollTop = 0;
+    if (S.screen === 'result' && opts.reveal) view.querySelector('.compare').classList.add('reveal');
+    var h = view.querySelector('[data-focus]');
+    if (h && opts.focus !== false) h.focus({ preventScroll: true });
+  }
+
+  var SCREENS = {
+    home: function () {
+      return '' +
+        '<div class="home-head"><p>Good evening</p><h2 class="title title-md" tabindex="-1" data-focus>Your money, this month</h2></div>' +
+        '<div class="balance"><span class="muted small">Savings account</span><b>Rs 1,84,320</b><span class="small muted">Salary credited on 1 Nov</span></div>' +
+        '<div class="quick" aria-hidden="true">' +
+          '<div><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#24306B" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg></span>Pay</div>' +
+          '<div><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#24306B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg></span>Transfer</div>' +
+          '<div><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#24306B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-8"/></svg></span>Invest</div>' +
+          '<div><span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#24306B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/></svg></span>Insure</div>' +
+        '</div>' +
+        '<button class="nudge" type="button" data-act="open-taxiq" data-source="salary_nudge">' + I.tick + '<div><strong>Salary credited</strong>See how much of it goes to tax this year</div></button>' +
+        '<button class="taxiq-banner" type="button" data-act="open-taxiq" data-source="home_banner">' + I.scale +
+          '<span class="tq">TaxIQ</span><strong>Which tax regime saves you more?</strong><span>Find out in about 2 minutes. No documents needed.</span><br><span class="cta">Check my regime</span></button>' +
+        '<div class="tabbar" aria-hidden="true"><div class="on">Home</div><div>Pay</div><div>Invest</div><div>Profile</div></div>';
+    },
+
+    landing: function () {
+      return '' +
+        '<div class="topbar"><button class="iconbtn" type="button" data-act="go-home" aria-label="Back to home">' + I.back + '</button></div>' +
+        '<div class="landing-hero grow">' +
+          '<h2 class="title title-lg" tabindex="-1" data-focus>Old or new regime? Get your answer in 2 minutes.</h2>' +
+          '<div class="regimes" aria-hidden="true"><div><b>Old regime</b><span class="small muted">Higher rates, many deductions</span></div><div><b>New regime</b><span class="small muted">Lower rates, tax-free up to Rs 12 lakh</span></div></div>' +
+          '<ul class="promise">' +
+            '<li>' + I.tick + '<span><strong>Four short steps.</strong> Only your salary is required.</span></li>' +
+            '<li>' + I.tick + '<span><strong>No documents, no PAN.</strong> Ranges and estimates are fine.</span></li>' +
+            '<li>' + I.tick + '<span><strong>Your answer comes first.</strong> We ask to save anything only after you see it.</span></li>' +
+          '</ul>' +
+        '</div>' +
+        '<div class="footer-cta"><button class="btn" type="button" data-act="start">Start the quiz</button></div>';
+    },
+
+    quiz: function () {
+      var body = QUIZ[S.step]();
+      var canNext = S.step !== 2 || S.a.gross > 0;
+      return '' +
+        '<div class="topbar">' +
+          '<button class="iconbtn" type="button" data-act="back" aria-label="Previous step">' + I.back + '</button>' +
+          '<div class="progress" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="' + S.step + '" aria-label="Quiz progress"><i style="width:' + (S.step * 25) + '%"></i></div>' +
+          '<span class="stepcount">Step ' + S.step + ' of 4</span>' +
+        '</div>' +
+        '<div class="pad grow">' + body + '</div>' +
+        '<div class="footer-cta"><button class="btn" type="button" data-act="next"' + (canNext ? '' : ' disabled') + '>' + (S.step === 4 ? 'See my result' : 'Continue') + '</button></div>';
+    },
+
+    result: function () {
+      var r = E.compare(S.a);
+      var moves = E.topMoves(S.a, goalsForMoves());
+      var win = r.better, lose = win === 'new' ? 'old' : 'new';
+      var max = Math.max(r.old.tax.total, r.new.tax.total, 1);
+      var hOld = Math.max(4, r.old.tax.total / max * 100), hNew = Math.max(4, r.new.tax.total / max * 100);
+      var headline = r.saving > 0
+        ? 'The ' + win + ' regime saves you ' + inr(r.saving) + '.'
+        : (r.new.tax.total === 0 ? 'You owe no tax under the new regime.' : 'Both regimes cost the same for you.');
+      var be = r.breakEvenBeyondStandard, have = r.claimedBeyondStandard;
+      var beLine = '';
+      if (be === 0) beLine = 'Your deductions of ' + inr(have) + ' already make the old regime the cheaper one.';
+      else if (be != null) beLine = 'The old regime needs about ' + inr(be) + ' of deductions beyond the standard deduction to break even. You have ' + inr(have) + '.';
+      var meter = be ? Math.min(100, have / be * 100) : 100;
+      var bar = function (k, h) {
+        var t = r[k].tax.total;
+        return '<div class="bar' + (k === win ? ' win' : '') + '"><div class="track"><span class="amt">' + inr(t) + '</span><div class="fill" style="height:calc((100% - 30px) * ' + (h / 100).toFixed(3) + ')"></div></div><span class="nm">' + (k === 'old' ? 'Old regime' : 'New regime') + (k === win ? ', better for you' : '') + '</span></div>';
+      };
+      var stamp = r.saving > 0 ? '<div class="stamp">You keep ' + inr(r.saving) + '<small>more this year</small></div>' : '';
+      var row = function (label, o, n) { return '<tr><td>' + label + '</td><td>' + o + '</td><td>' + n + '</td></tr>'; };
+      var od = r.old.deductions.items, nd = r.new.deductions.items;
+      var how = '<details class="how"><summary>How we got this</summary><table>' +
+        '<tr><th></th><th>Old</th><th>New</th></tr>' +
+        row('Income', inr(r.profile.gross), inr(r.profile.gross)) +
+        row('Standard deduction', inr(od.standard), inr(nd.standard)) +
+        (od.hra ? row('HRA exemption', inr(od.hra), '0') : '') +
+        row('80C + own NPS', inr(od.sec80C + od.sec80CCD1B), '0') +
+        (od.sec80D ? row('Health cover (80D)', inr(od.sec80D), '0') : '') +
+        (od.homeLoan ? row('Home-loan interest', inr(od.homeLoan), '0') : '') +
+        (od.employerNps || nd.employerNps ? row('Employer NPS', inr(od.employerNps), inr(nd.employerNps)) : '') +
+        row('Taxable income', inr(r.old.taxable), inr(r.new.taxable)) +
+        row('Tax incl. 4% cess', inr(r.old.tax.total), inr(r.new.tax.total)) +
+        '</table></details>';
+      var movesHtml = moves.map(function (m) {
+        var pill = m.impact ? '<span class="pill money-pill">Saves ' + inr(m.impact) + '</span>' : '<span class="pill">' + ({ protect: 'Protection', grow: 'Wealth', file: 'Filing', route: 'Needs an expert', tax: 'No tax due' }[m.kind] || 'Tip') + '</span>';
+        return '<li><h4>' + esc(m.title) + '</h4><p>' + esc(m.why) + '</p><div class="meta">' + pill + '<span class="pill">' + esc(m.works) + '</span></div></li>';
+      }).join('');
+      var explainer = win === 'new'
+        ? '<details class="explainer" data-explainer="why_new"><summary>Why the new regime often wins (60 seconds)</summary><p>In the new regime, taxable income up to Rs 12 lakh is tax-free because of the Section 87A rebate, and salaried people also get a Rs 75,000 standard deduction. The old regime only wins when HRA, home-loan interest, 80C and similar deductions add up to a large sum' + (be ? ', about ' + inr(be) + ' at your income' : '') + '. Most people never reach that, which is why about 72% of filers already chose the new regime.</p></details>'
+        : '<details class="explainer" data-explainer="why_old"><summary>Why the old regime still wins for you (60 seconds)</summary><p>Your HRA, home-loan interest and 80C together cut taxable income enough to beat the new regime\'s lower slabs. If any of them drops next year, for example you stop paying rent or finish the home loan, run TaxIQ again before declaring to HR.</p></details>';
+      return '' +
+        '<div class="topbar"><button class="iconbtn" type="button" data-act="back-to-quiz" aria-label="Edit answers">' + I.back + '</button><span class="small muted">FY 2026-27 estimate</span></div>' +
+        '<div class="verdict"><p class="kicker">Your result</p><h2 class="title title-lg" tabindex="-1" data-focus>' + headline + '</h2></div>' +
+        '<div class="compare">' + stamp + '<div class="bars">' + bar('old', hOld) + bar('new', hNew) + '</div>' +
+          (beLine ? '<p class="breakeven">' + beLine + '</p><div class="meter" aria-hidden="true"><i style="width:' + meter + '%"></i></div>' : '') +
+          how +
+        '</div>' +
+        '<div class="pad">' +
+          '<h3 class="list-title">Your top 3 moves</h3><ol class="moves">' + movesHtml + '</ol>' +
+          explainer +
+          '<p class="disclaimer">Educational estimate, not tax advice. Moves name product types, never specific products. Check with your employer or a CA before you declare.</p>' +
+        '</div>' +
+        '<div class="footer-cta">' +
+          (S.saved ? '<button class="btn" type="button" data-act="view-saved">View my saved plan</button>' : '<button class="btn" type="button" data-act="ask-consent">Save my plan</button>') +
+          '<button class="btn ghost" type="button" data-act="share">Share my result</button>' +
+        '</div>';
+    },
+
+    saved: function () {
+      var r = E.compare(S.a);
+      var moves = E.topMoves(S.a, goalsForMoves());
+      var rem = S.consent.reminders ? reminders(r).map(function (d) {
+        return '<li><time datetime="' + d.date + '">' + d.day + '<small>' + d.mon + '</small></time><span>' + esc(d.text) + '</span></li>';
+      }).join('') : '';
+      var offerMove = null;
+      for (var i = 0; i < moves.length; i++) if (moves[i].offer && !S.dismissed[moves[i].offer]) { offerMove = moves[i]; break; }
+      var offer = '';
+      if (S.consent.offers && offerMove) {
+        var o = OFFERS[offerMove.offer];
+        offer = '<h3 class="list-title">Picked for your plan</h3><div class="offer"><span class="label">Partner offer from a ' + o.who + '</span><h4>' + o.title + '</h4><p>Matches your move "' + esc(offerMove.title) + '". ' + o.body + '</p><div class="row"><button class="btn" type="button" data-act="offer-click" data-offer="' + offerMove.offer + '">' + o.cta + '</button><button class="btn ghost" type="button" data-act="offer-dismiss" data-offer="' + offerMove.offer + '">Not relevant</button></div></div>';
+      }
+      return '' +
+        '<div class="topbar"><button class="iconbtn" type="button" data-act="view-result" aria-label="Back to result">' + I.back + '</button></div>' +
+        '<div class="saved-head"><span class="ok">' + I.tick + 'Plan saved</span><h2 class="title title-md" tabindex="-1" data-focus style="margin-top:6px">' + (r.saving > 0 ? 'The ' + r.better + ' regime, keeping ' + inr(r.saving) + ' more.' : (r.new.tax.total === 0 ? 'New regime, no tax due.' : 'Either regime works for you.')) + '</h2></div>' +
+        '<div class="pad grow">' +
+          (rem ? '<h3 class="list-title">Your next deadlines</h3><ul class="reminders">' + rem + '</ul><p class="small muted" style="margin:6px 0 0">We send 2 reminders a week at most.</p>' : '<p class="small muted">Reminders are off. You can turn them on any time.</p>') +
+          offer +
+          '<h3 class="list-title">Your data</h3><p class="small" style="margin:0 0 8px">We keep your quiz answers so your plan updates each season. No PAN, no documents.</p>' +
+          '<button class="linkbtn danger" type="button" data-act="delete">Delete my data</button>' +
+        '</div>' +
+        '<div class="footer-cta"><button class="btn" type="button" data-act="share">Share my result</button><button class="btn ghost" type="button" data-act="go-home">Back to home</button></div>';
+    }
+  };
+
+  var OFFERS = {
+    health: { who: 'licensed insurer', title: 'Health cover for you', body: 'Compare cover amount and waiting periods, not just the premium.', cta: 'Compare plans' },
+    term: { who: 'licensed insurer', title: 'Term life cover', body: 'Pure protection for the people who depend on your income.', cta: 'Get a quote' },
+    nps: { who: 'registered NPS intermediary', title: 'Open or top up NPS', body: 'Works with employer contributions in both regimes.', cta: 'Start NPS' },
+    filing: { who: 'tax-filing partner', title: 'Expert-assisted filing', body: 'A tax expert reviews your return before the due date.', cta: 'Book an expert' },
+    elss: { who: 'registered mutual fund distributor', title: 'ELSS funds for 80C', body: 'The shortest lock-in among 80C options, at 3 years.', cta: 'See funds' }
+  };
+
+  function goalsForMoves() {
+    var g = S.a.goals.slice();
+    if ((S.a.filing === 'ca' || S.a.filing === 'never') && g.indexOf('file') < 0) g.push('file');
+    return g;
+  }
+
+  // FY 2026-27 deadlines; the list keeps only those still ahead of today.
+  function reminders(r) {
+    var self = !r.profile.salaried, list = [];
+    if (self || S.a.complexIncome) list.push(['2026-12-15', 'Advance tax: third instalment']);
+    if (r.better === 'old' && !self) list.push(['2027-01-15', 'Submit investment proofs to HR (date varies by employer)']);
+    if (self || S.a.complexIncome) list.push(['2027-03-15', 'Advance tax: final instalment']);
+    if (r.better === 'old') list.push(['2027-03-31', 'Last day for tax-saving investments for FY 2026-27']);
+    list.push(['2027-04-15', 'Declare your regime to HR for FY 2027-28 (we will re-run your plan after Budget 2027)']);
+    list.push([self ? '2027-08-31' : '2027-07-31', 'File your income tax return for FY 2026-27']);
+    var today = new Date().toISOString().slice(0, 10);
+    var mons = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return list.filter(function (d) { return d[0] >= today; }).slice(0, 3).map(function (d) {
+      return { date: d[0], day: String(Number(d[0].slice(8))), mon: mons[Number(d[0].slice(5, 7)) - 1] + ' ' + d[0].slice(0, 4), text: d[1] };
+    });
+  }
+
+  var QUIZ = {
+    1: function () {
+      return '<h2 class="title title-md" tabindex="-1" data-focus>First, a little about you</h2>' +
+        chipQ('How do you earn?', 'employment', [['salaried', 'Salaried'], ['self', 'Self-employed or freelance']], 'Salaried people get a standard deduction in both regimes.') +
+        chipQ('Your age', 'ageBand', [['below60', 'Under 60'], ['60to79', '60 to 79'], ['80plus', '80 or older']], 'Seniors have a higher tax-free limit in the old regime.');
+    },
+    2: function () {
+      var self = S.a.employment === 'self';
+      return '<h2 class="title title-md" tabindex="-1" data-focus>Your income this year</h2>' +
+        '<div class="q"><label for="gross">' + (self ? 'Yearly income after business expenses' : 'Yearly gross salary (CTC minus employer PF)') + '</label>' +
+          '<div class="salary-figure"><input id="gross" inputmode="numeric" autocomplete="off" value="' + inr(S.a.gross) + '" aria-describedby="gross-hint"></div>' +
+          '<input type="range" id="gross-range" min="300000" max="5000000" step="50000" value="' + Math.min(5000000, S.a.gross) + '" aria-label="Salary slider">' +
+          '<div class="range-ends"><span>Rs 3 lakh</span><span>Rs 50 lakh</span></div>' +
+          '<span class="hint" id="gross-hint">The only question we need an answer to. A rough figure is fine.</span></div>' +
+        chipQ('Any income from capital gains, F&O, crypto or abroad?', 'complexIncome', [[false, 'No'], [true, 'Yes']], 'These are taxed at special rates.') +
+        '<div class="route-note' + (S.a.complexIncome ? '' : ' hidden') + '" id="route-note">We will still compare regimes on your salary, and suggest an expert check for the rest.</div>';
+    },
+    3: function () {
+      var a = S.a, self = a.employment === 'self';
+      var r = E.compare(a);
+      var epf = r.profile.epfEstimate;
+      return '<h2 class="title title-md" tabindex="-1" data-focus>What you already have</h2>' +
+        '<p class="small muted" style="margin:6px 0 0">Leave anything blank if you are not sure. These only matter for the old regime.</p>' +
+        (self ? '' :
+          moneyQ('rentMonthly', 'Rent you pay', 'a month', 'Rent lets you claim HRA in the old regime.') +
+          '<div class="q' + (a.rentMonthly > 0 ? '' : ' hidden') + '" id="metro-q" style="margin-top:12px">' + chipsOnly('metro', [[true, 'Metro city'], [false, 'Other city']]) + '<span class="hint">Delhi, Mumbai, Kolkata and Chennai count as metros for HRA.</span></div>') +
+        moneyQ('inv80C', '80C investments this year', 'a year', self ? 'PPF, ELSS, life insurance and home-loan principal count, up to Rs 1.5 lakh.' : 'We pre-filled ' + inr(epf) + ' of EPF from your salary. Add PPF, ELSS or life insurance.', a.inv80C == null ? epf : a.inv80C) +
+        moneyQ('healthSelf', 'Your health insurance premium', 'a year', 'Deductible under 80D in the old regime.') +
+        moneyQ('healthParents', 'Your parents\' health premium', 'a year', '') +
+        '<label class="check"><input type="checkbox" id="parentsSenior"' + (a.parentsSenior ? ' checked' : '') + '> My parents are 60 or older</label>' +
+        moneyQ('homeLoanInterest', 'Home-loan interest', 'a year', 'For a home you live in, up to Rs 2 lakh.') +
+        moneyQ('npsOwn', 'Your own NPS contribution', 'a year', 'Up to Rs 50,000 extra in the old regime.');
+    },
+    4: function () {
+      return '<h2 class="title title-md" tabindex="-1" data-focus>What matters to you?</h2>' +
+        '<div class="q"><span class="qlabel" id="goals-l">Pick up to two</span><div class="chips" role="group" aria-labelledby="goals-l">' +
+          [['save', 'Save tax'], ['grow', 'Grow my money'], ['protect', 'Protect my family'], ['file', 'File without stress']].map(function (o) {
+            return '<button type="button" class="chip" data-goal="' + o[0] + '" aria-pressed="' + (S.a.goals.indexOf(o[0]) >= 0) + '">' + o[1] + '</button>';
+          }).join('') +
+        '</div><span class="hint">This ranks your moves. It never changes the tax numbers.</span></div>' +
+        chipQ('How do you file your return today?', 'filing', [['self', 'Myself'], ['ca', 'Through a CA'], ['never', 'Never filed'], ['employer', 'My employer helps']], '');
+    }
+  };
+
+  function chipsOnly(field, opts) {
+    return '<div class="chips" role="group">' + opts.map(function (o) {
+      return '<button type="button" class="chip" data-field="' + field + '" data-value="' + o[0] + '" aria-pressed="' + (S.a[field] === o[0]) + '">' + o[1] + '</button>';
+    }).join('') + '</div>';
+  }
+  function chipQ(label, field, opts, hint) {
+    var id = 'l-' + field;
+    return '<div class="q"><span class="qlabel" id="' + id + '">' + label + '</span>' + chipsOnly(field, opts).replace('role="group"', 'role="group" aria-labelledby="' + id + '"') + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
+  }
+  function moneyQ(field, label, per, hint, value) {
+    var v = value != null ? value : S.a[field];
+    return '<div class="q"><label for="f-' + field + '">' + label + '</label><div class="money"><span>Rs</span><input id="f-' + field + '" data-money="' + field + '" inputmode="numeric" autocomplete="off" placeholder="Leave blank if none" value="' + fmtPlain(v) + '"><em>' + per + '</em></div>' + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</div>';
+  }
+
+  // ---------- Overlays ----------
+  function overlay(html, label) {
+    closeOverlay();
+    var d = document.createElement('div');
+    d.className = 'scrim';
+    d.id = 'overlay';
+    d.innerHTML = '<div class="sheet" role="dialog" aria-modal="true" aria-label="' + label + '"><div class="grab"></div>' + html + '</div>';
+    screenEl.appendChild(d);
+    var f = d.querySelector('[data-focus]');
+    if (f) f.focus();
+  }
+  function closeOverlay() { var o = document.getElementById('overlay'); if (o) o.remove(); }
+  function toast(msg) {
+    var t = document.createElement('div');
+    t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+    screenEl.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2600);
+  }
+
+  function consentSheet() {
+    var c = S.consent;
+    var sw = function (k, title, body, disabled) {
+      return '<div class="toggle-row"><div><strong id="c-' + k + '">' + title + '</strong><span>' + body + '</span></div><button type="button" class="switch" role="switch" data-consent="' + k + '" aria-labelledby="c-' + k + '" aria-checked="' + (c[k] && !disabled) + '"' + (disabled ? ' disabled' : '') + '></button></div>';
+    };
+    overlay('<h2 class="title title-md" tabindex="-1" data-focus>Save your plan?</h2>' +
+      '<p class="small muted" style="margin:6px 0 4px">Choose what we may do with your answers. Change or delete them any time.</p>' +
+      sw('save', 'Save my answers', 'So your plan updates each tax season.') +
+      sw('reminders', 'Deadline reminders', 'Up to 2 a week, only around tax dates.', !c.save) +
+      sw('offers', 'Offers that fit my plan', 'From licensed partners, only when they close a gap in your moves.', !c.save) +
+      '<div style="margin-top:16px"><button class="btn" type="button" data-act="consent-save">Save choices</button><button class="btn ghost" type="button" data-act="consent-skip">Not now</button></div>', 'Save your plan');
+  }
+
+  function shareSheet() {
+    var r = E.compare(S.a);
+    var band = r.saving >= 100000 ? 'Rs 1 lakh or more' : r.saving >= 50000 ? 'Rs 50K to 1 lakh' : r.saving >= 10000 ? 'Rs 10K to 50K' : 'some';
+    var line = r.saving > 0 ? 'The ' + r.better + ' regime wins for me. I keep ' + band + ' more this year.' : (r.new.tax.total === 0 ? 'I owe no tax on the new regime.' : 'I checked my tax regime in 2 minutes.');
+    overlay('<h2 class="title title-md" tabindex="-1" data-focus>Share your result</h2>' +
+      '<p class="small muted" style="margin:6px 0 12px">Your card shows the regime and a savings range. It never shows your income.</p>' +
+      '<div class="share-card"><span class="tq">TaxIQ</span><strong>' + esc(line) + '</strong><p>Find your better regime in 2 minutes, no documents.</p></div>' +
+      '<button class="btn" type="button" data-act="share-copy" data-text="' + esc(line + ' Find yours on TaxIQ.') + '">Copy share link</button><button class="btn ghost" type="button" data-act="close">Close</button>', 'Share your result');
+  }
+
+  // ---------- Navigation ----------
+  function go(screen, opts) { S.screen = screen; closeOverlay(); render(opts); }
+
+  function loadPersona(key) {
+    S.a = key === 'blank' ? blankAnswers() : JSON.parse(JSON.stringify(PERSONAS[key]));
+    S.saved = false; S.resultMs = null; S.startedAt = null; S.dismissed = {};
+    S.consent = { save: true, reminders: true, offers: true };
+    track('persona_loaded', { persona: key });
+    go(key === 'blank' ? 'home' : 'landing');
+  }
+
+  // ---------- Events ----------
+  document.addEventListener('click', function (e) {
+    var p = e.target.closest('[data-persona]');
+    if (p) { loadPersona(p.getAttribute('data-persona')); return; }
+
+    var chip = e.target.closest('[data-field]');
+    if (chip) {
+      var f = chip.getAttribute('data-field'), raw = chip.getAttribute('data-value');
+      var v = raw === 'true' ? true : raw === 'false' ? false : raw;
+      S.a[f] = v;
+      chip.parentNode.querySelectorAll('.chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+      if (f === 'complexIncome') document.getElementById('route-note').classList.toggle('hidden', !v);
+      if (f === 'employment' && v === 'self') { S.a.rentMonthly = 0; }
+      if (f === 'employment') S.a.inv80C = null;
+      track('quiz_answer', { field: f, value: v });
+      return;
+    }
+    var g = e.target.closest('[data-goal]');
+    if (g) {
+      var key = g.getAttribute('data-goal'), idx = S.a.goals.indexOf(key);
+      if (idx >= 0) S.a.goals.splice(idx, 1);
+      else { S.a.goals.push(key); if (S.a.goals.length > 2) S.a.goals.shift(); }
+      document.querySelectorAll('[data-goal]').forEach(function (c) { c.setAttribute('aria-pressed', String(S.a.goals.indexOf(c.getAttribute('data-goal')) >= 0)); });
+      track('quiz_answer', { field: 'goals', value: S.a.goals.join('+') || 'none' });
+      return;
+    }
+    var sw = e.target.closest('[data-consent]');
+    if (sw) {
+      var k = sw.getAttribute('data-consent');
+      S.consent[k] = !S.consent[k];
+      if (k === 'save' && !S.consent.save) { S.consent.reminders = false; S.consent.offers = false; }
+      if (k === 'save' && S.consent.save) { S.consent.reminders = true; S.consent.offers = true; }
+      consentSheet();
+      var again = document.querySelector('[data-consent="' + k + '"]'); if (again) again.focus();
+      return;
+    }
+    var ex = e.target.closest('details.explainer summary');
+    if (ex) { track('explainer_opened', { id: ex.parentNode.getAttribute('data-explainer') }); }
+
+    var a = e.target.closest('[data-act]');
+    if (!a) return;
+    var act = a.getAttribute('data-act');
+    switch (act) {
+      case 'open-taxiq': track('entry_clicked', { source: a.getAttribute('data-source') }); go('landing'); break;
+      case 'go-home': go('home'); break;
+      case 'start':
+        S.step = 1; S.startedAt = Date.now(); S.resultMs = null;
+        track('quiz_started', { entry: 'landing' }); go('quiz'); break;
+      case 'back':
+        if (S.step === 1) go('landing'); else { S.step--; render(); } break;
+      case 'next':
+        track('quiz_step_completed', { step: S.step });
+        if (S.step < 4) { S.step++; render(); }
+        else {
+          if (S.startedAt && S.resultMs == null) S.resultMs = Date.now() - S.startedAt;
+          var r = E.compare(S.a);
+          track('result_viewed', { better: r.better, saving: r.saving, seconds: S.resultMs != null ? Math.round(S.resultMs / 1000) : 'n/a' });
+          go('result', { reveal: true });
+        }
+        break;
+      case 'back-to-quiz': S.step = 4; go('quiz'); break;
+      case 'view-result': go('result'); break;
+      case 'view-saved': go('saved'); break;
+      case 'ask-consent': track('consent_prompt_shown'); consentSheet(); break;
+      case 'consent-save':
+        track('consent_given', { save: S.consent.save, reminders: S.consent.reminders, offers: S.consent.offers });
+        if (S.consent.save) { S.saved = true; track('profile_saved'); go('saved'); }
+        else { closeOverlay(); toast('Nothing saved. Your plan stays on this screen.'); }
+        break;
+      case 'consent-skip': track('consent_declined'); closeOverlay(); toast('Not saved. We will ask again next visit.'); break;
+      case 'share': track('share_opened'); shareSheet(); break;
+      case 'share-copy':
+        var text = a.getAttribute('data-text');
+        if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function () {});
+        track('share_copied'); closeOverlay(); toast('Link copied. Friends land on the quiz.'); break;
+      case 'close': closeOverlay(); break;
+      case 'offer-click': track('offer_clicked', { offer: a.getAttribute('data-offer') }); toast('In the live app this opens the partner\'s quote flow.'); break;
+      case 'offer-dismiss': S.dismissed[a.getAttribute('data-offer')] = true; track('offer_dismissed', { offer: a.getAttribute('data-offer') }); render({ focus: false }); toast('Got it. We will not show that again.'); break;
+      case 'delete':
+        S.saved = false; S.consent = { save: true, reminders: true, offers: true };
+        track('profile_deleted'); go('home'); toast('Your saved answers are deleted.'); break;
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.getElementById('overlay')) closeOverlay();
+  });
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.id === 'gross-range') {
+      S.a.gross = Number(t.value);
+      document.getElementById('gross').value = inr(S.a.gross);
+      updateNext();
+    } else if (t.id === 'gross') {
+      S.a.gross = digits(t.value);
+      if (S.a.gross >= 300000 && S.a.gross <= 5000000) document.getElementById('gross-range').value = S.a.gross;
+      updateNext();
+    } else if (t.hasAttribute('data-money')) {
+      var f = t.getAttribute('data-money');
+      S.a[f] = t.value.trim() === '' && f === 'inv80C' ? null : digits(t.value);
+      if (f === 'rentMonthly') document.getElementById('metro-q').classList.toggle('hidden', !(S.a.rentMonthly > 0));
+    } else if (t.id === 'parentsSenior') {
+      S.a.parentsSenior = t.checked;
+    }
+  });
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.id === 'gross') t.value = inr(S.a.gross);
+    if (t.hasAttribute('data-money')) { var v = S.a[t.getAttribute('data-money')]; t.value = fmtPlain(v); if (v) track('quiz_answer', { field: t.getAttribute('data-money'), value: 'set' }); }
+  });
+  function updateNext() {
+    var b = view.querySelector('[data-act="next"]');
+    if (b) b.disabled = !(S.a.gross > 0);
+  }
+
+  render({ focus: false });
+  setInterval(updateTimer, 1000);
+})();
+</script>
+</body>
+</html>
